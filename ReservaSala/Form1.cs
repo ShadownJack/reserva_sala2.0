@@ -20,6 +20,11 @@ namespace ReservaSala
                 MessageBox.Show("Por favor, preencha todos os campos obrigatórios.");
                 return;
             }
+            else if (!ValidarLetras(txtNome.Text))
+            {
+                MessageBox.Show("Não é permitido digitar números no campo nome");
+                return;
+            }
             Reserva reserva = CriarReserva();
             if (VerificarConflito(reserva))
             {
@@ -51,7 +56,7 @@ namespace ReservaSala
                 $"{reserva.Sala};" +
                 $"{reserva.Data:dd/MM/yyyy};" +
                 $"{reserva.Horario};" +
-                $"{reserva.Duracao:hh\\:mm\\:ss}"; // <- escapamento dos dois-pontos
+                $"{reserva.Duracao:hh\\:mm\\:ss}";
 
             File.AppendAllText("reservas.txt", linha + Environment.NewLine);
         }
@@ -102,13 +107,21 @@ namespace ReservaSala
         {
             List<Reserva> reservas = CarregarReservas();
 
+            TimeSpan inicioNova = novaReserva.Horario;
+            TimeSpan fimNova = novaReserva.Horario + novaReserva.Duracao;
+
             foreach (Reserva reserva in reservas)
             {
-                if (reserva.Sala == novaReserva.Sala &&
-                    reserva.Data == novaReserva.Data &&
-                    reserva.Horario == novaReserva.Horario)
+                if (reserva.Sala != novaReserva.Sala || reserva.Data != novaReserva.Data)
+                    continue; // sala ou data diferente, não precisa nem comparar horário
+
+                TimeSpan inicioExistente = reserva.Horario;
+                TimeSpan fimExistente = reserva.Horario + reserva.Duracao;
+
+                // checa se os intervalos se cruzam
+                if (inicioNova < fimExistente && inicioExistente < fimNova)
                 {
-                    return true;
+                    return true; // tem conflito
                 }
             }
 
@@ -120,6 +133,18 @@ namespace ReservaSala
             var reservas = CarregarReservas();
             lblReservas.Text = $"Quantidade de reservas já efetuadas: {reservas.Count.ToString()} reserva(s)\n\n\n" +
                 string.Join(Environment.NewLine, reservas.Select(r => $"{r.Responsavel} reservou a sala {r.Sala} em {r.Data:dd/MM/yyyy} às {r.Horario} por {r.Duracao:hh\\:mm\\:ss}"));
+        }
+
+        private bool ValidarLetras(string input)
+        {
+            foreach (char c in input)
+            {
+                if (!char.IsLetter(c) && !char.IsWhiteSpace(c))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
     }
 }
